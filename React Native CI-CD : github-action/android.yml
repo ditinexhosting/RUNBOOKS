@@ -1,0 +1,78 @@
+name: Android FAD - Dev
+
+# Manual deployment
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: string
+        default: 'release'
+      # version_name:
+      #   description: Version Name
+      #   required: true
+      #   default: '1.0.0'
+      # version_code:
+      #   description: Version Code
+      #   required: true
+      #   default: '1'
+
+jobs:
+  build-apk:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 17
+
+      - name: Install Node modules
+        run: npm install --force
+
+      - name: Cache Gradle Wrapper
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-caches-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-caches-
+      - name: Make Gradlew Executable
+        run: cd android && chmod +x ./gradlew
+
+      - name: Copy env.json
+        run: |
+          echo ${{ secrets.DEV_ENV_BASE64 }} | base64 -d > ./env.json
+          cat env.json
+      - name: Copy Signing release.keystore
+        run: |
+          echo '${{secrets.DEV_ANDROID_RELEASE_KEYSTORE_BASE64}}' | base64 -d > android/app/release.keystore
+          cat android/app/release.keystore | base64
+      - name: Copy google-service.json
+        run: |
+          echo '${{secrets.DEV_ANDROID_GOOGLE_SERVICE_JSON}}' > android/app/google-services.json
+          cat android/app/google-services.json
+      - name: Build Android Release
+        run: |
+          cd android && ./gradlew bundleRelease --no-daemon --warning-mode all
+
+      # Upload to Firebase App Distribution
+      - name: Upload to Firebase App Distribution
+        uses: emertozd/Firebase-Distribution-Github-Action@v2
+        with:
+          appId: ${{secrets.DEV_FIREBASE_ANDROID_APP_ID}}
+          serviceCredentialsFileContent: ${{ secrets.DEV_FIREBASE_SERVICE_CREDENTIAL }}
+          file: android/app/build/outputs/bundle/release/app-release.aab
+          groups: dev-testers

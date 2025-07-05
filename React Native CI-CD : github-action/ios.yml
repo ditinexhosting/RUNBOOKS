@@ -1,0 +1,92 @@
+name: iOS FAD - Dev
+
+# Manual deployment
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: string
+        default: 'release'
+      # version_name:
+      #   description: Version Name
+      #   required: true
+      #   default: '1.0.0'
+      # version_code:
+      #   description: Version Code
+      #   required: true
+      #   default: '1'
+
+jobs:
+  production-build:
+    name: ios-production-build
+    runs-on: macos-latest
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # Setup Git Repo
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Environment File
+        run: echo ${{ secrets.DEV_ENV_BASE64 }} | base64 -d > ./env.json
+
+      - name: Google Service Info Plist File
+        run: echo ${{ secrets.DEV_IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }} | base64 -d > ./ios/GoogleService-Info.plist
+
+      # MAC Version and XCode version
+      - name: Xcode Version & Env
+        run: |
+          cat ./env.json
+          /usr/bin/xcodebuild -version
+          sw_vers
+
+      # Install Fastlane
+      - name: Install Fastlane
+        run: brew install fastlane
+
+      # Install NPM Packages
+      - name: Install dependencies
+        run: npm install --force
+
+      - name: Install Pods
+        run: cd ios && pod install --repo-update && cd ..
+
+      - name: Create Apple certificate and provisioning profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.DEV_IOS_P12_BASE64 }}
+          P12_PASSWORD: ''
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.DEV_IOS_MOBILE_PROVISION_BASE64 }}
+        run: |
+          pwd
+          mkdir ./ios/fastlane/secrets
+          CERTIFICATE_PATH='./ios/fastlane/secrets/certificate.p12'
+          PROVISIONING_PATH='./ios/fastlane/secrets/360HRIS.mobileprovision'
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PROVISIONING_PATH
+
+          ls -al ./ios/fastlane/secrets
+
+      - name: Build Beta Archive
+        run: |
+          cd ios
+          fastlane beta
+          ls -al ./build
+          cd ..
+
+      # Upload to Firebase App Distribution
+      - name: Upload to Firebase App Distribution
+        uses: emertozd/Firebase-Distribution-Github-Action@v2
+        with:
+          appId: ${{secrets.DEV_FIREBASE_IOS_APP_ID}}
+          serviceCredentialsFileContent: ${{ secrets.DEV_FIREBASE_SERVICE_CREDENTIAL }}
+          file: 'ios/build/hris.ipa'
+          groups: dev-testers
