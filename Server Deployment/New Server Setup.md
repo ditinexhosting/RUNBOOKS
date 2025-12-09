@@ -51,6 +51,11 @@
   ```
   sudo npm install pm2 -g
   ```
+  - Enable PM2 startup
+  ```
+  pm2 startup
+  ```
+  - Copy and run the script the above command provides. In our case it was `sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu`
   - Install Nginx Webserver
   ```
   sudo apt update
