@@ -63,5 +63,8 @@
   sudo ufw allow "Nginx Full"
   ```
   - Now the subdomain we added should resolve and show default nginx page : `http://civic.ditinex.com/` without https.
+ 
+  #### Install Certbot for free SSL
+  - Install for nginx by command : `sudo apt install certbot python3-certbot-nginx`
 
 
