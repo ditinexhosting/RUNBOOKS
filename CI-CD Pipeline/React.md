@@ -54,7 +54,7 @@ jobs:
 
       - name: Deploying into server
         run: |
-          ssh server 'cd /home/ubuntu/mice.ditinex.com/MICE-frontend && git reset --hard && git pull origin staging && npm install && pm2 restart mice.ditinex.com-FE --time && pm2 flush mice.ditinex.com-FE'
+          ssh server 'cd /home/ubuntu/mice.ditinex.com/MICE-frontend && git reset --hard && git pull origin staging && npm install && npm run build && rm -rf build && mv dist build && pm2 restart mice.ditinex.com-FE --time && pm2 flush mice.ditinex.com-FE'
       - run: echo "🎉 Deployed successfully."
 ```
 - Modify the names and command as per your need. 
