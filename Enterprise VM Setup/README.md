@@ -1,5 +1,26 @@
 # 1️⃣ Application Logs & Incident Reporting
 
+## Architecture 
++-------------------+     +-------------------+
+|  App Server 1     |     |  App Server 2     |
+|-------------------|     |-------------------|
+| FastAPI           |     | Next.js           |
+| Node Exporter     |     | Node Exporter     |
+| :9100             |     | :9100             |
++---------+---------+     +---------+---------+
+          \                       /
+           \                     /
+            \                   /
+         +-----------------------------+
+         | Monitoring Server           |
+         |-----------------------------|
+         | Prometheus                  |
+         | Grafana                     |
+         | Alertmanager                |
+         | Loki (optional)             |
+         +-----------------------------+
+
+
 ## ✅ What you need
 
 * Structured logs (JSON)
