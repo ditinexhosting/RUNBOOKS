@@ -1,6 +1,7 @@
 # 1️⃣ Application Logs & Incident Reporting
 
 ## Architecture 
+```psql
 +-------------------+     +-------------------+
 |  App Server 1     |     |  App Server 2     |
 |-------------------|     |-------------------|
@@ -19,6 +20,7 @@
          | Alertmanager                |
          | Loki (optional)             |
          +-----------------------------+
+```
 
 
 ## ✅ What you need
