@@ -19,5 +19,5 @@
     CONNECTION LIMIT = -1
     IS_TEMPLATE = False;
     ```
-  - In case you need to add extensions in postgress, refer : [KB](https://learn.microsoft.com/en-us/azure/postgresql/extensions/how-to-allow-extensions?tabs=allow-extensions-portal)
+  - In case you need to add extensions like : pgcrypto in postgress, refer : [KB](https://learn.microsoft.com/en-us/azure/postgresql/extensions/how-to-allow-extensions?tabs=allow-extensions-portal)
 
