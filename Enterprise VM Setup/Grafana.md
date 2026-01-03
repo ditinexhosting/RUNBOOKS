@@ -40,5 +40,5 @@ sudo nano /etc/grafana/grafana.ini
 http_port = 9000
 http_addr = 127.0.0.1
 ```
-- Reverse proxy domain with port 8000 to access grafana. Install SSL on domain
+- Reverse proxy domain with port 9000 to access grafana. Install SSL on domain
 - Open Grafana, login with "admin" as both username and password. Then change password
