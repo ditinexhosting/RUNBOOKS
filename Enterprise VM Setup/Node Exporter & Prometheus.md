@@ -146,6 +146,6 @@ sudo systemctl status prometheus
   - Save & Test
 
 - Add grafana dashboard
-  - Grafana → Dashboards → Import
+  - Grafana → Dashboards → Import Dashboard
   - Enter 1860
   - Select Prometheus datasource
