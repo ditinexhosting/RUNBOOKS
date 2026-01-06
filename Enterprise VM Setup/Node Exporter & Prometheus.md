@@ -164,3 +164,9 @@ location /prometheus/ {
   - Grafana → Dashboards → Import Dashboard
   - Enter 1860
   - Select Prometheus datasource
+ 
+
+
+
+
+**PRO TIPS :** Run `/usr/local/bin/prometheus -h` for all available metrics 
