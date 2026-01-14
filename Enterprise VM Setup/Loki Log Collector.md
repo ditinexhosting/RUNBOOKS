@@ -1,0 +1,150 @@
+# Install and setup Grafana Loki in Ubuntu
+
+#### Prerequisite
+- Install and setup grafana and prometheus, refer other readme.
+
+#### Installation on MONITOR Server
+- Download Loki in monitor linux server. Refer [Loki releases](https://github.com/grafana/loki/releases/)
+- Download amd64 for ubuntu
+```
+cd /tmp
+
+wget https://github.com/grafana/loki/releases/download/v3.6.3/loki-linux-amd64.zip
+
+unzip loki-linux-amd64.zip
+sudo chmod +x loki-linux-amd64
+
+sudo mv loki-linux-amd64 /usr/local/bin/loki
+sudo mkdir -p /etc/loki
+sudo mkdir -p /var/lib/loki/{chunks,rules}
+```
+- We already have monitor user, set the ownership to monitor.
+```
+sudo chown -R monitor:monitor /var/lib/loki /etc/loki
+```
+- Setup the loki config `sudo nano /etc/loki/loki-config.yaml` and paste the config. You can use the base config from (here)[https://github.com/grafana/loki/blob/main/cmd/loki/loki-local-config.yaml]
+```
+auth_enabled: false
+
+server:
+  http_listen_port: 9200
+  grpc_listen_port: 9096
+  log_level: debug
+  grpc_server_max_concurrent_streams: 1000
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /var/lib/loki
+  storage:
+    filesystem:
+      chunks_directory: /var/lib/loki/chunks
+      rules_directory: /var/lib/loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+limits_config:
+  metric_aggregation_enabled: true
+  enable_multi_variant_queries: true
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+pattern_ingester:
+  enabled: true
+  metric_aggregation:
+    loki_address: localhost:9200
+
+ruler:
+  alertmanager_url: http://localhost:9093
+
+frontend:
+  encoding: protobuf
+
+analytics:
+  reporting_enabled: false
+```
+- Create systemd service `sudo nano /etc/systemd/system/loki.service` with content
+```
+[Unit]
+Description=Loki Log Aggregation System
+Documentation=https://grafana.com/docs/loki/latest/
+After=network-online.target
+
+[Service]
+Type=simple
+User=monitor
+Group=monitor
+ExecStart=/usr/local/bin/loki -config.file=/etc/loki/loki-config.yaml
+Restart=on-failure
+RestartSec=5s
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/loki
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+```
+- Reload and enable
+```
+sudo systemctl daemon-reload
+sudo systemctl enable loki
+sudo systemctl start loki
+sudo systemctl status loki
+```
+- Verify whether it is ready
+```
+# Check if Loki is running
+curl http://localhost:9200/ready
+
+# Check metrics endpoint
+curl http://localhost:9200/metrics
+
+# View logs
+sudo journalctl -u loki -f
+```
+- Send a test log entry
+```
+curl -X POST http://localhost:9200/loki/api/v1/push \
+  -H "Content-Type: application/json" \
+  -d '{
+    "streams": [
+      {
+        "stream": {
+          "job": "test"
+        },
+        "values": [
+          ["'"$(date +%s)000000000"'", "test log message"]
+        ]
+      }
+    ]
+  }'
+```
+- Query log entry
+```
+curl -G -s "http://localhost:9200/loki/api/v1/query_range" \
+  --data-urlencode 'query={job="test"}' \
+  --data-urlencode 'limit=10' | jq
+```
+- Add loki Data source in grafana : `http://localhost:9200`
+- Import Log viewer dashboard : `https://grafana.com/grafana/dashboards/13639-logs-app/`
