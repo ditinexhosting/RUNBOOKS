@@ -90,6 +90,7 @@ global:
 
 scrape_configs:
   - job_name: "prometheus"
+    metrics_path: "/prometheus/metrics"
     static_configs:
       - targets:
           - "localhost:9090"
@@ -157,7 +158,7 @@ location /prometheus/ {
 - Add prometheus data to grafana
   - Settings → Data Sources
   - Add → Prometheus
-  - Add url : http://localhost:9090
+  - Add url : http://localhost:9090/prometheus
   - Save & Test
 
 - Add grafana dashboard
