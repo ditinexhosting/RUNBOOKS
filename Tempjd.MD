@@ -1,5 +1,3 @@
-
-
 ## Front-End Developer (React.js) — 3–4 Years
 
 We’re looking for a **strong Front-End Developer** who enjoys building real products, solving real problems, and taking ownership end-to-end. This role is for someone who can **think independently, write logic without AI shortcuts**, and ship **pixel-perfect, production-ready UI**.
