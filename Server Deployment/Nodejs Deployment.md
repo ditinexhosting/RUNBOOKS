@@ -15,7 +15,7 @@
 - In .env , configure to run it in port of your choice, set the DB URL and other stuff. We are using 2000 for FE and 2001 for BE
 - Run `npm install`
 - Now try running the build with `npm start`
-- If it successfully runs, close it and then set it in pm2 service : `pm2 start "npm start" --name "civic.ditinex.com-BE"`
+- If it successfully runs, close it and then set it in pm2 service : `pm2 start "npm start" --name "civic.ditinex.com-BE --time"`
 - Run `pm2 save` so that it doesn't go away on restart.
 - Update the nginx config with the following to enable reverse proxy in port 2000 in the earlier created config file `/etc/nginx/sites-available/civic.ditinex.com` : 
 ```
