@@ -19,7 +19,7 @@
 - Run `pm2 save` so that it doesn't go away on restart.
 - Update the nginx config with the following to enable reverse proxy in port 2000 in the earlier created config file `/etc/nginx/sites-available/civic.ditinex.com` : 
 ```
-location / {
+location /api/ {
            proxy_pass http://localhost:2000;
            proxy_http_version                 1.1;
            proxy_cache_bypass                 $http_upgrade;
