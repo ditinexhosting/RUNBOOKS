@@ -17,7 +17,7 @@
 - Run `npm run build`
 - After completing build , Run `mv dist build`
 - Now try running the build with `npm run production`
-- If it successfully runs then set it in pm2 service : `pm2 start "npm run production" --name "civic.ditinex.com-FE"`
+- If it successfully runs then set it in pm2 service : `pm2 start "npm run production" --name "civic.ditinex.com-FE" --time`
 - Run `pm2 save` so that it doesn't go away on restart.
 - Update the nginx config with the following to enable reverse proxy in port 2000 in the earlier created config file `/etc/nginx/sites-available/civic.ditinex.com` : 
 ```
