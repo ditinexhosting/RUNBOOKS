@@ -29,7 +29,7 @@ auth_enabled: false
 server:
   http_listen_port: 9200
   grpc_listen_port: 9096
-  log_level: warn
+  log_level: debug
   grpc_server_max_concurrent_streams: 1000
 
 common:
@@ -148,3 +148,130 @@ curl -G -s "http://localhost:9200/loki/api/v1/query_range" \
 ```
 - Add loki Data source in grafana : `http://localhost:9200`
 - Import Log viewer dashboard : `https://grafana.com/grafana/dashboards/13639-logs-app/`
+
+
+##### Install Alloy to collect logs
+- Install Grafana Alloy
+```
+sudo mkdir -p /etc/apt/keyrings
+sudo wget -O /etc/apt/keyrings/grafana.asc https://apt.grafana.com/gpg-full.key
+sudo chmod 644 /etc/apt/keyrings/grafana.asc
+echo "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+
+sudo apt-get update
+
+sudo apt-get install alloy
+
+sudo systemctl enable alloy
+sudo systemctl start alloy
+sudo systemctl status alloy
+sudo systemctl restart alloy
+```
+- Check the alloy logs 
+```
+sudo journalctl -u alloy
+```
+- Refer to the (configuration docs)[https://grafana.com/docs/alloy/latest/configure/linux/]
+- Example Config to tail pm2 error and out log and handle json as well as non json error. Edit the config file : `sudo nano /etc/alloy/config.alloy`
+```
+logging {
+  level = "info"
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://localhost:9200/loki/api/v1/push"  // Changed to 9200
+  }
+}
+
+// --------------------------------------------------
+// ONLY active (non-rotated) PM2 logs
+// --------------------------------------------------
+local.file_match "cargo_pm2_active_logs" {
+  path_targets = [
+    {
+      __path__ = "/home/ubuntu/.pm2/logs/cargo.ditinex.com-error.log",
+    },
+    {
+      __path__ = "/home/ubuntu/.pm2/logs/cargo.ditinex.com-out.log",
+    },
+  ]
+}
+
+loki.source.file "cargo_pm2" {
+  targets    = local.file_match.cargo_pm2_active_logs.targets
+  forward_to = [loki.process.cargo.receiver]
+}
+
+loki.process "cargo" {
+  forward_to = [loki.write.default.receiver]
+
+  // --------------------------------------------------
+  // Multiline Node.js stack traces
+  // --------------------------------------------------
+  stage.multiline {
+    firstline     = "^[^\\s]"
+    max_wait_time = "3s"
+  }
+
+  // --------------------------------------------------
+  // Detect error vs out from filename
+  // --------------------------------------------------
+  stage.regex {
+    expression = ".*/cargo\\.ditinex\\.com-(?P<stream>error|out)\\.log"
+    source     = "filename"
+  }
+
+  stage.labels {
+    values = {
+      stream = "",
+    }
+  }
+
+  // --------------------------------------------------
+  // Safe JSON parsing (mixed logs)
+  // --------------------------------------------------
+  stage.match {
+    selector = "{stream=~\".+\"}"
+    
+    stage.json {
+      expressions = {
+        level       = "level",
+        message     = "message",
+        fingerprint = "fingerprint",
+        name        = "name",
+        timestamp   = "timestamp",
+      }
+    }
+
+    // Promote labels ONLY if JSON fields exist
+    stage.labels {
+      values = {
+        level       = "",
+        fingerprint = "",
+        error_name  = "name",
+      }
+    }
+
+    // Prefer JSON message, fallback to raw line
+    stage.output {
+      source = "message"
+    }
+  }
+
+  // --------------------------------------------------
+  // Static labels (applied to all logs)
+  // --------------------------------------------------
+  stage.static_labels {
+    values = {
+      app         = "cargo",
+      env         = "production",
+      pm2_process = "cargo.ditinex.com",
+    }
+  }
+}
+```
+- Reload config
+```
+sudo systemctl reload alloy
+```
