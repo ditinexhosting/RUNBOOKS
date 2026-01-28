@@ -29,7 +29,7 @@ auth_enabled: false
 server:
   http_listen_port: 9200
   grpc_listen_port: 9096
-  log_level: debug
+  log_level: warn
   grpc_server_max_concurrent_streams: 1000
 
 common:
