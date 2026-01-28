@@ -42,4 +42,22 @@ http_addr = 127.0.0.1
 ```
 - Restart grafana `sudo systemctl restart grafana-server`
 - Reverse proxy domain with port 9000 to access grafana. Install SSL on domain
+```
+location / {
+           proxy_pass http://localhost:9000;
+           proxy_http_version                 1.1;
+           proxy_cache_bypass                 $http_upgrade;
+
+           # Proxy headers
+           proxy_set_header Upgrade           $http_upgrade;
+           proxy_set_header Host              $host;
+           proxy_set_header Connection        $connection_upgrade;
+
+           # Proxy timeouts
+           proxy_connect_timeout              60s;
+           proxy_send_timeout                 3600s;
+           proxy_read_timeout                 3600s;
+           #try_files $uri $uri/ =404;
+        }
+```
 - Open Grafana, login with "admin" as both username and password. Then change password
