@@ -180,98 +180,69 @@ logging {
 
 loki.write "default" {
   endpoint {
-    url = "http://localhost:9200/loki/api/v1/push"  // Changed to 9200
+    url = "https://stats.imeld.ai/loki/api/v1/push" 
   }
 }
 
 // --------------------------------------------------
 // ONLY active (non-rotated) PM2 logs
 // --------------------------------------------------
-local.file_match "cargo_pm2_active_logs" {
+local.file_match "pm2_logs" {
   path_targets = [
     {
-      __path__ = "/home/ubuntu/.pm2/logs/cargo.ditinex.com-error.log",
+      __path__ = "/home/mark/.pm2/logs/dev.imeld.ai-error.log",
+      job      = "dev.imeld.ai",
+      env      = "frontend",
+      host     = "error",
+      stream   = "stderr",
     },
     {
-      __path__ = "/home/ubuntu/.pm2/logs/cargo.ditinex.com-out.log",
+      __path__ = "/home/mark/.pm2/logs/dev.imeld.ai-out.log",
+      job      = "dev.imeld.ai",
+      env      = "frontend",
+      host     = "out",
+      stream   = "stdout",
     },
   ]
 }
 
-loki.source.file "cargo_pm2" {
-  targets    = local.file_match.cargo_pm2_active_logs.targets
-  forward_to = [loki.process.cargo.receiver]
+loki.source.file "loki_pm2" {
+  targets    = local.file_match.pm2_logs.targets
+  forward_to = [loki.write.default.receiver]
+  tail_from_end = true
 }
 
-loki.process "cargo" {
-  forward_to = [loki.write.default.receiver]
+// ===== FastAPI Logs =====
+local.file_match "fastapi_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/log/fastapi/dev.imeld.ai-error.log",
+      job      = "dev.imeld.ai",
+      env      = "backend",
+      host     = "error",
+      stream   = "stderr",
+    },
+    {
+      __path__ = "/var/log/fastapi/dev.imeld.ai-access.log",
+      job      = "dev.imeld.ai",
+      env      = "backend",
+      host     = "out",
+      stream   = "stdout",
+    },
+  ]
+}
 
-  // --------------------------------------------------
-  // Multiline Node.js stack traces
-  // --------------------------------------------------
-  stage.multiline {
-    firstline     = "^[^\\s]"
-    max_wait_time = "3s"
-  }
-
-  // --------------------------------------------------
-  // Detect error vs out from filename
-  // --------------------------------------------------
-  stage.regex {
-    expression = ".*/cargo\\.ditinex\\.com-(?P<stream>error|out)\\.log"
-    source     = "filename"
-  }
-
-  stage.labels {
-    values = {
-      stream = "",
-    }
-  }
-
-  // --------------------------------------------------
-  // Safe JSON parsing (mixed logs)
-  // --------------------------------------------------
-  stage.match {
-    selector = "{stream=~\".+\"}"
-    
-    stage.json {
-      expressions = {
-        level       = "level",
-        message     = "message",
-        fingerprint = "fingerprint",
-        name        = "name",
-        timestamp   = "timestamp",
-      }
-    }
-
-    // Promote labels ONLY if JSON fields exist
-    stage.labels {
-      values = {
-        level       = "",
-        fingerprint = "",
-        error_name  = "name",
-      }
-    }
-
-    // Prefer JSON message, fallback to raw line
-    stage.output {
-      source = "message"
-    }
-  }
-
-  // --------------------------------------------------
-  // Static labels (applied to all logs)
-  // --------------------------------------------------
-  stage.static_labels {
-    values = {
-      app         = "cargo",
-      env         = "production",
-      pm2_process = "cargo.ditinex.com",
-    }
-  }
+loki.source.file "loki_fastapi" {
+  targets       = local.file_match.fastapi_logs.targets
+  forward_to    = [loki.write.default.receiver]
+  tail_from_end = true
 }
 ```
 - Reload config
 ```
 sudo systemctl reload alloy
 ```
+- Create grafana dashboard using `https://grafana.com/grafana/dashboards/13639-logs-app/`
+
+#### Aditional tips to view API calls / usage 
+
