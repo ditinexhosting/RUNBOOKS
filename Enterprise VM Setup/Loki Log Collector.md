@@ -245,4 +245,24 @@ sudo systemctl reload alloy
 - Create grafana dashboard using `https://grafana.com/grafana/dashboards/13639-logs-app/`
 
 #### Aditional tips to view API calls / usage 
+- To see nice logs graph of the stats about api calls, usage and response time from nginx access logs. Add : 
+```
+// ===== API Access Logs =====
+local.file_match "api_access_logs" {
+  path_targets = [
+    {
+      __path__ = "/var/log/nginx/access_json.log",
+      job      = "dev.imeld.ai",
+      env      = "api_access",
+      host     = "access",
+      stream   = "stdout",
+    },
+  ]
+}
 
+loki.source.file "api_access_logs" {
+  targets       = local.file_match.fastapi_logs.targets
+  forward_to    = [loki.write.default.receiver]
+  tail_from_end = true
+}
+```
