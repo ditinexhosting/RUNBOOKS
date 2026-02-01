@@ -245,7 +245,27 @@ sudo systemctl reload alloy
 - Create grafana dashboard using `https://grafana.com/grafana/dashboards/13639-logs-app/`
 
 #### Aditional tips to view API calls / usage 
-- To see nice logs graph of the stats about api calls, usage and response time from nginx access logs. Add : 
+- To see nice logs graph of the stats about api calls, usage and response time from nginx access logs.
+- Add in nginx.conf
+```
+log_format api_json escape=json
+'{'
+ '"time":"$time_iso8601",'
+ '"remote_addr":"$remote_addr",'
+ '"x_forwarded_for":"$http_x_forwarded_for",'
+ '"method":"$request_method",'
+ '"uri":"$request_uri",'
+ '"status":$status,'
+ '"body_bytes_sent":$body_bytes_sent,'
+ '"request_time":$request_time,'
+ '"user_agent":"$http_user_agent"'
+'}';
+```
+- Add new log file in the domain config fro only api blocks
+```
+access_log /var/log/nginx/access_json.log api_json;
+```
+- Alloy config for stats
 ```
 // ===== API Access Logs =====
 local.file_match "api_access_logs" {
@@ -260,9 +280,66 @@ local.file_match "api_access_logs" {
   ]
 }
 
+loki.process "api_access" {
+
+  stage.json {
+    drop_malformed = false
+    expressions = {
+      time             = "time",
+      remote_addr      = "remote_addr",
+      x_forwarded_for  = "x_forwarded_for",
+      method           = "method",
+      uri              = "uri",
+      status           = "status",
+      request_time     = "request_time",
+      body_bytes_sent  = "body_bytes_sent",
+      user_agent       = "user_agent",
+    }
+  }
+
+  // OPTIONAL but HIGHLY recommended to reduce cardinality
+  stage.replace {
+    source     = "uri"
+    expression = "/[0-9a-fA-F-]{36}"
+    replace    = "/:id"
+  }
+
+
+  stage.labels {
+    values = {
+      method = "method",
+      status = "status",
+    }
+  }
+
+  stage.timestamp {
+    source = "time"
+    format = "RFC3339"
+  }
+
+stage.metrics {
+    metric.counter {
+      name        = "http_requests_total"
+      description = "Total HTTP requests"
+      match_all   = true
+      action      = "inc"
+    }
+    metric.histogram {
+      name        = "http_request_duration_seconds"
+      description = "HTTP request latency"
+      source      = "request_time"
+      buckets     = [0.1, 0.3, 0.5, 1, 2, 3, 5, 10]
+    }
+  }
+
+
+  forward_to = [loki.write.default.receiver]
+}
+
+
 loki.source.file "api_access_logs" {
-  targets       = local.file_match.fastapi_logs.targets
-  forward_to    = [loki.write.default.receiver]
+  targets       = local.file_match.api_access_logs.targets
+  forward_to    = [loki.process.api_access.receiver]
   tail_from_end = true
 }
 ```
