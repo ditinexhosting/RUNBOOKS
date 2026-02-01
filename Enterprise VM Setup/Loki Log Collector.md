@@ -170,6 +170,10 @@ sudo systemctl restart alloy
 - Check the alloy logs 
 ```
 sudo journalctl -u alloy
+
+OR
+
+journalctl -u alloy -n 100 --no-pager
 ```
 - Refer to the (configuration docs)[https://grafana.com/docs/alloy/latest/configure/linux/]
 - Example Config to tail pm2 error and out log and handle json as well as non json error. Edit the config file : `sudo nano /etc/alloy/config.alloy`
