@@ -147,6 +147,8 @@ print('Providers:', ort.get_available_providers())
 
 > **Note:** If your server runs CUDA 13.x (check with `nvcc --version`), install the CPU-only version — `onnxruntime==1.18.0` without the `-gpu` suffix. The main LivePortrait inference still runs on GPU via PyTorch. Only face detection uses ONNX Runtime, and it runs fast on CPU.
 
+source /venv/main/bin/activate && pip install torch==2.5.1+cu118 torchvision==0.20.1+cu118 torchaudio==2.5.1+cu118 --index-url https://download.pytorch.org/whl/cu118 2>&1
+
 ### Step 8 — Upload your face photo
 
 From your **local machine**, open a new terminal and run:
